@@ -18,14 +18,6 @@ export default function FavoritesScreen() {
   const { user } = useAuth();
   const { favorites, isLoading, refreshFavorites } = useFavorites();
 
-  useEffect(() => {
-    console.log('🌟 Favorites Screen - Data:', {
-      favoritesCount: favorites.length,
-      favorites: favorites,
-      isLoading,
-    });
-  }, [favorites, isLoading]);
-
   useFocusEffect(
     useCallback(() => {
       refreshFavorites();

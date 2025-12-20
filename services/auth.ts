@@ -30,17 +30,11 @@ export const authService = {
     const response = await api.post('/user/login', data);
     const { accessToken, refreshToken } = response.data;
     
-    console.log('📥 Login response received');
-    console.log('Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'MISSING');
-    console.log('Refresh token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'MISSING');
-    
     // Save tokens - NO expiry tracking
     await AsyncStorage.multiSet([
       [TOKEN_KEYS.ACCESS_TOKEN, accessToken],
       [TOKEN_KEYS.REFRESH_TOKEN, refreshToken],
     ]);
-    
-    console.log('✅ Tokens saved (interceptor will handle refresh)');
     
     return response.data;
   },
@@ -54,10 +48,8 @@ export const authService = {
       try {
         await api.post('/user/logout', { refreshToken });
       } catch (error) {
-        console.log('⚠️ Logout API call failed, but continuing with local cleanup');
+        // Ignore logout errors
       }
-    } else {
-      console.log('⚠️ No refresh token found, skipping logout API call');
     }
     
     // Always clear local tokens
@@ -84,8 +76,6 @@ export const authService = {
       [TOKEN_KEYS.ACCESS_TOKEN, accessToken],
       [TOKEN_KEYS.REFRESH_TOKEN, newRefreshToken],
     ]);
-    
-    console.log('✅ Tokens refreshed by interceptor');
     
     return response.data.tokens;
   },

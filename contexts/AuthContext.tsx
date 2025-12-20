@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '../services/auth';
+import { useToast } from '../hooks/useToast';
 
 interface User {
     _id: string;
@@ -27,46 +28,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const queryClient = useQueryClient();
+    const toast = useToast();
 
     useEffect(() => {
         checkAuth();
     }, []);
 
     const checkAuth = async () => {
-        console.log('🔐 AuthContext: checkAuth() called');
         try {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) {
-                console.log('⚠️ AuthContext: No access token found');
                 setLoading(false);
                 return;
             }
 
-            console.log('📞 AuthContext: Fetching user profile...');
             const userData = await authService.getProfile();
-            console.log('✅ AuthContext: User profile fetched successfully:', userData.username);
             setUser(userData);
         } catch (error: any) {
-            console.error('❌ AuthContext: Auth check failed:', error.message);
-            
             if (!error.response) {
                 if (error.message === 'Network Error') {
-                    console.log('🌐 AuthContext: Network error - no internet connection or server unreachable');
+                    toast.showError('Lỗi kết nối', 'Không thể kết nối đến server. Vui lòng kiểm tra mạng.');
                 } else if (error.message?.includes('timeout') || error.code === 'ECONNABORTED') {
-                    console.log('⏱️ AuthContext: Auth check timeout - server may be slow');
+                    toast.showError('Lỗi kết nối', 'Kết nối quá chậm. Vui lòng thử lại.');
                 } else if (error.name === 'AuthenticationError') {
-                    console.log('🚪 AuthContext: Auth error from interceptor - tokens already cleared');
+                    toast.showError('Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục.');
                     setUser(null);
                 } else {
-                    console.log('❓ AuthContext: Auth check failed with unknown error:', error.message);
+                    toast.showError('Lỗi xác thực', error.message || 'Đã xảy ra lỗi không xác định.');
                 }
-
             } else if (error.response?.status === 401 || error.response?.status === 403) {
-                console.log('🔒 AuthContext: Token invalid (401/403), clearing auth data');
+                toast.showError('Phiên đăng nhập hết hạn', 'Token không hợp lệ. Vui lòng đăng nhập lại.');
                 await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
                 setUser(null);
             } else if (error.message === 'Authentication failed') {
-                console.log('🚪 AuthContext: Authentication failed, tokens cleared by interceptor');
+                toast.showError('Xác thực thất bại', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                 setUser(null);
             }
         } finally {
@@ -75,14 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const login = async (email: string, password: string) => {
-        try {
-            await authService.login({ email, password });
-            const userData = await authService.getProfile();
-            setUser(userData);
-        } catch (error) {
-            console.error('Login failed:', error);
-            throw error;
-        }
+        await authService.login({ email, password });
+        const userData = await authService.getProfile();
+        setUser(userData);
     };
 
     const register = async (username: string, email: string, password: string) => {
@@ -93,20 +83,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             await authService.logout();
         } catch (error) {
-            console.error('Logout API call failed:', error);
-
+            toast.showError('Lỗi đăng xuất', 'Không thể đăng xuất từ server, nhưng đã xóa phiên đăng nhập local.');
         } finally {
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
             setUser(null);
-
             queryClient.clear();
         }
     };
 
     const updateUser = (userData: User) => {
-        console.log('🔄 AuthContext: updateUser() called with:', userData);
         setUser(userData);
-        console.log('✅ AuthContext: User state updated');
     };
 
     return (

@@ -38,19 +38,9 @@ api.interceptors.response.use(
 
     // Handle network errors (no response from server)
     if (!error.response) {
-      console.error('API Error:', {
-        message: error.message,
-        url: error.config?.url,
-        code: error.code,
-        isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
-        isNetworkError: error.message === 'Network Error',
-      });
-
       if (error.message === 'Network Error') {
-        console.warn('Network Error - No internet connection or server unreachable');
         showOfflineBanner();
       } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        console.warn('Request timeout - server may be slow or unavailable');
         showOfflineBanner();
       }
 
@@ -74,14 +64,8 @@ api.interceptors.response.use(
           errorMessage.toLowerCase().includes('authentication');
         
         if (!isTokenError) {
-          console.log('⚠️ 403 is permission error (not token) - keeping tokens');
-          console.log('403 message:', errorMessage);
           return Promise.reject(error);
         }
-        
-        console.log('🔄 403 with token error - attempting refresh');
-      } else {
-        console.log('🔄 Got 401 - attempting token refresh');
       }
 
       originalRequest._retry = true;
@@ -89,11 +73,9 @@ api.interceptors.response.use(
       try {
         const refreshToken = await AsyncStorage.getItem('refreshToken');
         if (!refreshToken) {
-          console.log('❌ No refresh token found');
           throw new Error('No refresh token');
         }
 
-        console.log('🔄 Calling refresh token API...');
         const response = await axios.post(`${BASE_URL}/user/refresh`, {
           refreshToken,
         });
@@ -105,38 +87,18 @@ api.interceptors.response.use(
           ['accessToken', accessToken],
           ['refreshToken', newRefreshToken],
         ]);
-        
-        console.log('✅ Token refreshed successfully');
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        console.log('❌ Token refresh failed - clearing tokens');
-        
         // ONLY clear tokens when refresh fails
         await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
-        console.log('🚪 User will be logged out');
         
         const authError: any = new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         authError.name = 'AuthenticationError';
         return Promise.reject(authError);
       }
-    }
-
-    // Log other API errors for debugging
-    // Skip logging expected errors (e.g., logout with invalidated token after password change)
-    const isLogoutWithInvalidToken = 
-      error.config?.url?.includes('/user/logout') && error.response?.status === 400;
-    
-    if (!isLogoutWithInvalidToken) {
-      console.error('API Error:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        message: error.message,
-        url: error.config?.url,
-        data: error.response?.data,
-      });
     }
 
     return Promise.reject(error);
