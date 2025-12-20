@@ -8,6 +8,7 @@ interface FavoritesContextType {
   addFavorite: (league: any) => Promise<void>;
   removeFavorite: (leagueId: string) => Promise<void>;
   toggleFavorite: (league: any) => Promise<boolean>;
+  refreshFavorites: () => Promise<void>;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);

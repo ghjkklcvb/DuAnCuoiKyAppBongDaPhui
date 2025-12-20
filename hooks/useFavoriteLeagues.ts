@@ -82,5 +82,6 @@ export const useFavoriteLeagues = () => {
     addFavorite,
     removeFavorite,
     toggleFavorite,
+    refreshFavorites: loadFavorites, // Expose refresh function
   };
 };

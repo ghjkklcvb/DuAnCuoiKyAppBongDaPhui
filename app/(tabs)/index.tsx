@@ -6,13 +6,14 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDebounce } from '@/hooks/useDebounce';
 import { leagueService } from '@/services/league';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import TabsBackground from '@/components/tabs/TabsBackground';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -23,6 +24,7 @@ export default function HomeScreen() {
   const colors = Colors;
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { 
     data,
@@ -122,6 +124,12 @@ export default function HomeScreen() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['publicLeagues'] });
+    }, [queryClient])
+  );
 
   const renderFooter = useCallback(() => {
     if (!isFetchingNextPage) return null;

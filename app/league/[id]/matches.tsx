@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
-import React, { useState, useMemo } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, StatusBar } from 'react-native';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MatchCard from '../../../components/match/MatchCard';
 import { Colors } from '../../../constants/theme';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { useLeagueId } from '../../../hooks/useRouteParams';
 import { matchService } from '../../../services/match';
 import LeagueBackground from '../../../components/league/LeagueBackground';
+import { useFocusEffect } from '@react-navigation/native';
+import { getLeagueToken } from '@/utils/leagueLink';
 
 export default function MatchesListScreen() {
   const id = useLeagueId();
@@ -16,19 +18,38 @@ export default function MatchesListScreen() {
   const colors = Colors;
   const [selectedRound, setSelectedRound] = useState<number | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [savedToken, setSavedToken] = useState<string | null>(null);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const token = await getLeagueToken(id as string);
+        setSavedToken(token);
+      } catch (error) {
+        console.error('Error loading saved token:', error);
+      } finally {
+        setTokenLoaded(true);
+      }
+    };
+    loadToken();
+  }, [id]);
 
   const { data: allMatchesData } = useQuery({
-    queryKey: ['matches', id],
-    queryFn: () => matchService.getMatchesByLeague(id as string),
-    staleTime: 30000, 
+    queryKey: ['matches', id, savedToken],
+    queryFn: () => matchService.getMatchesByLeague(id as string, savedToken || undefined),
+    staleTime: 30000,
+    enabled: tokenLoaded,
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['matches', id, selectedRound, selectedStatus],
-    queryFn: () => matchService.getMatchesByLeague(id as string, undefined, {
+    queryKey: ['matches', id, selectedRound, selectedStatus, savedToken],
+    queryFn: () => matchService.getMatchesByLeague(id as string, savedToken || undefined, {
       round: selectedRound || undefined,
       status: selectedStatus || undefined,
     }),
+    enabled: tokenLoaded,
     retry: (failureCount, error: any) => {
       if (error.message?.includes('timeout') && failureCount < 3) {
         return true;
@@ -49,12 +70,14 @@ export default function MatchesListScreen() {
     { value: 'finished', label: 'Đã đấu' },
   ];
 
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['matches', id] });
+    }, [queryClient, id])
+  );
+
   return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -66,6 +89,12 @@ export default function MatchesListScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
           headerRight: () => (
             <TouchableOpacity

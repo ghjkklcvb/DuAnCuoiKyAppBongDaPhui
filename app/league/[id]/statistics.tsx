@@ -1,22 +1,48 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View, StatusBar } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import TopTeamCard from '../../../components/stats/TopTeamCard';
 import { Colors } from '../../../constants/theme';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { useLeagueId } from '../../../hooks/useRouteParams';
 import { standingsService } from '../../../services/standings';
 import LeagueBackground from '../../../components/league/LeagueBackground';
+import { useFocusEffect } from '@react-navigation/native';
+import { getLeagueToken } from '@/utils/leagueLink';
 
 export default function StatisticsScreen() {
   const id = useLeagueId();
   const colors = Colors;
+  const queryClient = useQueryClient();
+  const [savedToken, setSavedToken] = useState<string | null>(null);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const token = await getLeagueToken(id as string);
+        setSavedToken(token);
+      } catch (error) {
+        console.error('Error loading saved token:', error);
+      } finally {
+        setTokenLoaded(true);
+      }
+    };
+    loadToken();
+  }, [id]);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['leagueStats', id],
-    queryFn: () => standingsService.getLeagueStats(id as string),
+    queryKey: ['leagueStats', id, savedToken],
+    queryFn: () => standingsService.getLeagueStats(id as string, savedToken || undefined),
+    enabled: tokenLoaded,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['leagueStats', id] });
+    }, [queryClient, id])
+  );
 
   const calculateFormPoints = (form: any): number => {
     if (!form) return 0;
@@ -54,10 +80,6 @@ export default function StatisticsScreen() {
   if (isLoading) {
     return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -69,6 +91,12 @@ export default function StatisticsScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
         }}
       />
@@ -83,10 +111,6 @@ export default function StatisticsScreen() {
 
   return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -98,6 +122,12 @@ export default function StatisticsScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
         }}
       />

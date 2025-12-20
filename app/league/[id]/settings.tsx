@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Clipboard, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, StatusBar, Platform } from 'react-native';
+import { Alert, Clipboard, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { generateLeagueLink } from '@/utils/leagueLink';
 import LeagueBackground from '@/components/league/LeagueBackground';
 
@@ -25,7 +25,6 @@ export default function LeagueSettingsScreen() {
 
   const [isPrivate, setIsPrivate] = useState(false);
 
-  // Sync state with league data
   React.useEffect(() => {
     if (league?.visibility) {
       setIsPrivate(league.visibility === 'private');
@@ -122,10 +121,6 @@ export default function LeagueSettingsScreen() {
 
   return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -137,6 +132,12 @@ export default function LeagueSettingsScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
         }}
       />

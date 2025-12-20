@@ -92,7 +92,7 @@ function CurvedTabBar({
   const svgPath = useMemo(() => {
     const width = 375;
     const height = 70;
-    const curveWidth = 90;
+    const curveWidth = 95;
     const curveDepth = 45;
     
     const tabWidth = width / totalTabs;
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? 90 : 80,
+    height: Platform.OS === 'ios' ? 80 : 80,
     backgroundColor: 'transparent',
   },
   tabsRow: {

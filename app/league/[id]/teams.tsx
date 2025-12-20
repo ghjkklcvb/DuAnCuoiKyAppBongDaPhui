@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, Stack } from 'expo-router';
 import { useLeagueId } from '@/hooks/useRouteParams';
-import React, { useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View, StatusBar } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import TeamCard from '../../../components/team/TeamCard';
 import { Colors } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -12,6 +12,7 @@ import { useLeagueToken } from '../../../hooks/useLeagueToken';
 import { leagueService } from '../../../services/league';
 import { teamService } from '../../../services/team';
 import LeagueBackground from '../../../components/league/LeagueBackground';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function LeagueTeamsScreen() {
   const id = useLeagueId();
@@ -20,6 +21,7 @@ export default function LeagueTeamsScreen() {
   const colors = Colors;
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const { savedToken, tokenLoaded } = useLeagueToken(id);
+  const queryClient = useQueryClient();
 
   const { data: league } = useQuery({
     queryKey: ['league', id, savedToken],
@@ -58,6 +60,15 @@ export default function LeagueTeamsScreen() {
   
   const [openMenuTeamId, setOpenMenuTeamId] = useState<string | null>(null);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (tokenLoaded) {
+        queryClient.invalidateQueries({ queryKey: ['league', id] });
+        queryClient.invalidateQueries({ queryKey: ['teams', id] });
+      }
+    }, [queryClient, id, tokenLoaded])
+  );
+
   const handleAssignGroups = () => {
     if (!canAssignGroups) return;
     
@@ -76,10 +87,6 @@ export default function LeagueTeamsScreen() {
 
   return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -91,6 +98,12 @@ export default function LeagueTeamsScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
           headerRight: () => isOwner ? (
             <View style={styles.headerActions}>

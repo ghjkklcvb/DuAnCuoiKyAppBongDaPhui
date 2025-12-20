@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Keyboard } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { parseLeagueLink, saveLeagueToken } from '@/utils/leagueLink';
@@ -15,6 +15,8 @@ export default function AccessPrivateLeagueScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
+    
     if (!linkCode.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập mã truy cập');
       return;
@@ -80,6 +82,9 @@ export default function AccessPrivateLeagueScreen() {
             autoCorrect={false}
             multiline
             numberOfLines={3}
+            blurOnSubmit={true}
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
           />
         </View>
 

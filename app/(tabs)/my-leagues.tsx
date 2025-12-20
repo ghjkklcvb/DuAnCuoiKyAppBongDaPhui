@@ -4,18 +4,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { leagueService } from '@/services/league';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import TabsBackground from '@/components/tabs/TabsBackground';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function MyLeaguesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const colors = Colors;
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['myLeagues', user?._id],
@@ -28,6 +30,12 @@ export default function MyLeaguesScreen() {
     await refetch();
     setRefreshing(false);
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['myLeagues', user?._id] });
+    }, [queryClient, user?._id])
+  );
 
   const renderEmptyComponent = () => (
     <View style={styles.emptyContainer}>

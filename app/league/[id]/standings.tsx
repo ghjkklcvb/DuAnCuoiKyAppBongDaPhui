@@ -1,40 +1,60 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, StatusBar } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import StandingsTable from '../../../components/standings/StandingsTable';
 import { Colors } from '../../../constants/theme';
 import { useColorScheme } from '../../../hooks/use-color-scheme';
 import { standingsService } from '../../../services/standings';
 import LeagueBackground from '../../../components/league/LeagueBackground';
+import { useFocusEffect } from '@react-navigation/native';
+import { getLeagueToken } from '@/utils/leagueLink';
 
 export default function StandingsScreen() {
   const { id } = useLocalSearchParams();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const colors = Colors;
+  const queryClient = useQueryClient();
+  const [savedToken, setSavedToken] = useState<string | null>(null);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      try {
+        const token = await getLeagueToken(id as string);
+        setSavedToken(token);
+      } catch (error) {
+        console.error('Error loading saved token:', error);
+      } finally {
+        setTokenLoaded(true);
+      }
+    };
+    loadToken();
+  }, [id]);
 
   const { data: leagueInfo } = useQuery({
-    queryKey: ['league-standings-info', id],
+    queryKey: ['league-standings-info', id, savedToken],
     queryFn: async () => {
-      const response = await standingsService.getStandings(id as string);
+      const response = await standingsService.getStandings(id as string, savedToken || undefined);
       return response;
     },
+    enabled: tokenLoaded,
   });
 
   const isGroupStage = leagueInfo?.league?.type === 'group-stage';
 
   const { data: standings, isLoading } = useQuery({
-    queryKey: ['standings', id, selectedGroup, isGroupStage],
+    queryKey: ['standings', id, selectedGroup, isGroupStage, savedToken],
     queryFn: () => {
       if (selectedGroup) {
-        return standingsService.getGroupStandings(id as string, selectedGroup);
+        return standingsService.getGroupStandings(id as string, selectedGroup, savedToken || undefined);
       }
       if (isGroupStage) {
-        return standingsService.getAllGroupsStandings(id as string);
+        return standingsService.getAllGroupsStandings(id as string, savedToken || undefined);
       }
-      return standingsService.getStandings(id as string);
+      return standingsService.getStandings(id as string, savedToken || undefined);
     },
-    enabled: leagueInfo !== undefined,
+    enabled: leagueInfo !== undefined && tokenLoaded,
   });
 
   const groups = isGroupStage && leagueInfo?.league?.groupSettings
@@ -42,12 +62,15 @@ export default function StandingsScreen() {
         (_, i) => String.fromCharCode(65 + i))
     : [];
 
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['standings', id] });
+      queryClient.invalidateQueries({ queryKey: ['league-standings-info', id] });
+    }, [queryClient, id])
+  );
+
   return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -59,6 +82,12 @@ export default function StandingsScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
         }}
       />

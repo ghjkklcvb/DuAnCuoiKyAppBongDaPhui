@@ -9,12 +9,13 @@ import { teamService } from '@/services/team';
 import StandingsTable from '@/components/standings/StandingsTable';
 import MatchCard from '@/components/match/MatchCard';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Alert, Image, ScrollView,StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getLeagueToken } from '@/utils/leagueLink';
 import LeagueBackground from '@/components/league/LeagueBackground';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function LeagueDetailScreen() {
   const id = useLeagueId();
@@ -24,6 +25,7 @@ export default function LeagueDetailScreen() {
   const [activeTab, setActiveTab] = useState('overview');
   const [savedToken, setSavedToken] = useState<string | null>(null);
   const [tokenLoaded, setTokenLoaded] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const loadToken = async () => {
@@ -80,6 +82,19 @@ export default function LeagueDetailScreen() {
   const leagueOwnerId = typeof league?.owner === 'object' ? league.owner._id : league?.owner;
   const isOwner = user?._id && leagueOwnerId && user._id === leagueOwnerId;
 
+  useFocusEffect(
+    useCallback(() => {
+      if (tokenLoaded) {
+        queryClient.invalidateQueries({ queryKey: ['league', id] });
+        queryClient.invalidateQueries({ queryKey: ['teams', id] });
+        queryClient.invalidateQueries({ queryKey: ['matches', id] });
+        queryClient.invalidateQueries({ queryKey: ['standings', id] });
+        queryClient.invalidateQueries({ queryKey: ['group-standings', id] });
+        queryClient.invalidateQueries({ queryKey: ['statistics', id] });
+      }
+    }, [queryClient, id, tokenLoaded])
+  );
+
   const handleShareToken = () => {
     if (league?.accessToken) {
       Alert.alert(
@@ -118,10 +133,6 @@ export default function LeagueDetailScreen() {
 
   return (
     <>
-      <StatusBar 
-        backgroundColor="rgba(214, 18, 64, 1)"
-        barStyle="light-content"
-      />
       <Stack.Screen
         options={{
           headerShown: true,
@@ -133,6 +144,12 @@ export default function LeagueDetailScreen() {
           headerTitleStyle: {
             color: '#FFFFFF',
             fontWeight: '600',
+          },
+          headerTransparent: false,
+          headerBlurEffect: undefined,
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
           },
           headerRight: () =>
             isOwner ? (

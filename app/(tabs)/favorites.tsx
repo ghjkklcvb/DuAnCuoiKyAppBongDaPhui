@@ -5,17 +5,18 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import TabsBackground from '@/components/tabs/TabsBackground';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function FavoritesScreen() {
   const colors = Colors;
   const router = useRouter();
   const { user } = useAuth();
-  const { favorites, isLoading } = useFavorites();
+  const { favorites, isLoading, refreshFavorites } = useFavorites();
 
   useEffect(() => {
     console.log('🌟 Favorites Screen - Data:', {
@@ -24,6 +25,12 @@ export default function FavoritesScreen() {
       isLoading,
     });
   }, [favorites, isLoading]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshFavorites();
+    }, [refreshFavorites])
+  );
 
   const renderEmptyComponent = () => {
     if (isLoading) {
